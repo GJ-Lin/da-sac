@@ -1,7 +1,8 @@
 import os
 import sys
+import cv2
+import time
 import numpy as np
-import imageio
 import threading
 from PIL import Image
 
@@ -20,39 +21,28 @@ from datasets.dataloader_infer import get_dataloader
 from utils.sys_tools import check_dir
 
 from infer_val import convert_dict, mask_overlay
-from infer_val import ResultWriter
 
-# save logits
-D_SAVE_RAW = False 
-# save CS labels
-D_SAVE_CS = False
-D_VIS = True
-# test mode: no ground truth
-D_NOGT = True
 
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
+
 
 class CamCap:
     def __init__(self, id):
         self.Frame = []
         self.status = False
         self.isstop = False
-        # 摄影机连接。
         self.cap = cv2.VideoCapture(id)
 
     def start(self):
-        # 把程序放进子线程，daemon=True 表示该线程会随着主线程关闭而关闭。
         print('cam started!')
         threading.Thread(target=self.queryframe, daemon=True, args=()).start()
 
     def stop(self):
-        # 记得要设计停止无限循环的开关。
         self.isstop = True
         print('cam stopped!')
 
     def getFrame(self):
-        # 当有需要影像时，再回传最新的影像。
         return self.Frame
     
     def getStatus(self):
@@ -71,15 +61,6 @@ if __name__ == '__main__':
     cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
-
-    # initialising the dirs
-    check_dir(args.mask_output_dir, "vis")
-    check_dir(args.mask_output_dir, "cs")
-    if D_SAVE_RAW:
-        check_dir(args.mask_output_dir, "raw")
-
-    #check_dir(args.mask_output_dir, "crf")
-
     num_classes = get_num_classes(args)
 
     # Loading the model
@@ -94,57 +75,30 @@ if __name__ == '__main__':
 
     # setting the evaluation mode
     model.eval()
-    # model = nn.DataParallel(model).cuda()
-    model = nn.DataParallel(model).cpu()
-    # import onnx
-    # model = onnx.load("final_e136.onnx")
+    model = nn.DataParallel(model).cuda()
+    # model = nn.DataParallel(model).cpu()
 
     infer_dataset = get_dataloader(args.dataloader, cfg, args.infer_list)
     palette = infer_dataset.get_palette()
 
-    writer = ResultWriter(palette, args.mask_output_dir, verbose=D_VIS, raw=D_SAVE_RAW, save_cs=D_SAVE_CS)
-
-    import cv2
-    import time
     cap = CamCap(0)
     cap.start()
     time.sleep(1)
-    # cap = cv2.VideoCapture(2)  # /dev/video0
-    # cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     while(True):
-
         frame = cap.getFrame()
-        # ret, frame = cap.read()  # ret==True/False: read successfully or not; frame: image
         if not cap.getStatus():
             print("Failed to read the image.")
             break
-        # display image
-        # cv2.imshow('Video', frame)
-        # cv2.imwrite('convert_test_cv.jpg', frame)
+        
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        # image.show()
-        # image.save('convert_test.jpg')
-        # break
-        # press ESC key to exit
-        # key = cv2.waitKey(1)
-        # if key == 27:
-        #     break
-        # time.sleep(0.01)
-
-        # image = Image.open('input/test_input.png').convert('RGB')
-        # image = Image.open('input/test_input2.jpeg').convert('RGB')
         image = tf.to_tensor(image)
 
         imnorm = transform.Normalize(MEAN, STD)
         image = imnorm(image)
-        # exit(0)
-        # 原来经过 DataLoader 时升高了一个维度，加一个 batch_size
+        
+        # 原来经过 DataLoader 时升高了一维，需要包裹一个 batch_size
         image = image.view(1,*image.size())
-        # print(type(image))
-        # print(image.size())
-        # print(image)
 
-        # exit(0)
         with torch.no_grad():
             _, logits = model(image, teacher=False)
             masks_pred = F.softmax(logits, 1)
@@ -156,24 +110,18 @@ if __name__ == '__main__':
         masks_raw = masks.numpy()
         pred = np.argmax(masks_raw, 0).astype(np.uint8)
 
-
         masks = pred
         images = image.numpy()
-
         images = np.transpose(images, [1,2,0])
 
         overlay = mask_overlay(masks, images, palette)
-        # filepath = os.path.join(self.out_path, "vis", im_name + '.png')
-        # filepath = 'test_img.png'
-        # imageio.imwrite(filepath, (overlay * 255.).astype(np.uint8))
         img = cv2.cvtColor(np.asarray((overlay * 255.).astype(np.uint8)), cv2.COLOR_RGB2BGR)
+
         cv2.imshow('Video', img)
         key = cv2.waitKey(1)
+        # press Esc to quit
         if key == 27:
             break
-        # break
     
-    # cap.release()
     cap.stop()
     cv2.destroyAllWindows()
-    exit(0)
