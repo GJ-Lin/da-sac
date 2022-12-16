@@ -28,3 +28,4 @@ infer_camera.py.bak
 README copy.md
 single.py
 launch/infer_single.sh
+infer_camera_onnx.py
