@@ -69,3 +69,26 @@ cap = CamCap(DEVICE_ID)
     ```
 
 - *(可选的)* 在 `opts.py` 中的 `get_arguments` 方法中加入参数检查：`check_global_arguments(args)`
+
+### 单独图像的推理
+
+在 `infer_camera.py` 中添加了一个 Dasac 类，可以单独使用，此时参数通过字典传入，可参考 `demo.py`：
+
+```python
+import cv2
+from infer_camera import Dasac
+from PIL import Image
+
+args = {
+    'cfg_file': 'configs/deeplabv2_resnet101_train.yaml',
+    'set_cfgs': [],
+    'resume': 'snapshots/cityscapes/baselines/resnet101_gta/final_e136.pth',
+    'dataloader': 'cityscapes',
+    'infer_list': 'val_cityscapes'
+}
+dasac = Dasac(args)
+image = Image.open('input/test_input.png').convert('RGB')
+img_infer = dasac.infer(image)
+cv2.imshow('img_infer', img_infer)
+cv2.waitKey(0)
+```
