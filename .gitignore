@@ -16,7 +16,7 @@ snapshots/cityscapes/baselines/resnet101_synthia/final_e164.pth
 snapshots/cityscapes/baselines/resnet101_gta/baseline_abn_e040.pth
 models/basenet copy.py
 launch/infer_camera_onnx.sh
-input/test_input.png
+# input/test_input.png
 test_img.png
 test_onnx_tf.py
 test_onnx.py
@@ -26,3 +26,5 @@ cam_test2.py
 cam_test.py
 infer_camera.py.bak
 README copy.md
+single.py
+launch/infer_single.sh
