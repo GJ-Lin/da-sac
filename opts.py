@@ -104,6 +104,7 @@ def get_arguments(args_in):
 
     add_global_arguments(parser)
     args = parser.parse_args(args_in)
-    check_global_arguments(args)
+    # change disable gpu check 12/15 lgj
+    # check_global_arguments(args)
 
     return args

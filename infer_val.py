@@ -40,10 +40,10 @@ cudnn.benchmark = False
 cudnn.deterministic = True
 
 # save logits
-D_SAVE_RAW = False
+D_SAVE_RAW = False # change to True 12/15 lgj
 # save CS labels
 D_SAVE_CS = True
-D_VIS = False
+D_VIS = True # change to True 12/15 lgj
 # test mode: no ground truth
 D_NOGT = False
 
@@ -147,7 +147,9 @@ if __name__ == '__main__':
 
     # setting the evaluation mode
     model.eval()
-    model = nn.DataParallel(model).cuda()
+    # change location 12/15 lgj
+    # model = nn.DataParallel(model).cuda()
+    model = nn.DataParallel(model).cpu()
 
     infer_dataset = get_dataloader(args.dataloader, cfg, args.infer_list)
     infer_data_loader = DataLoader(infer_dataset, shuffle=False, num_workers=args.workers, \

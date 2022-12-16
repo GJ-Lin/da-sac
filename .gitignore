@@ -1,3 +1,26 @@
 *.pyc
 *.sw*
+__pycache__/
 data/
+infer_val.py.bak
+.gitignore
+convert_test_cv.jpg
+convert_test.jpg
+onnx_test.jpg
+results/
+.vscode/
+final_e136.onnx
+input/test_input2.jpeg
+snapshots/cityscapes/baselines/resnet101_gta/final_e136.pth
+snapshots/cityscapes/baselines/resnet101_synthia/final_e164.pth
+snapshots/cityscapes/baselines/resnet101_gta/baseline_abn_e040.pth
+models/basenet copy.py
+launch/infer_camera_onnx.sh
+input/test_input.png
+test_img.png
+test_onnx_tf.py
+test_onnx.py
+tempCodeRunnerFile.py
+test.py
+cam_test2.py
+cam_test.py

@@ -38,11 +38,16 @@ class DLInfer(DLBase):
         self.ignore_labels = ignore_labels
 
         # train/val/test splits are pre-cut
-        split_fn = os.path.join(self.root, self.split + ".txt")
-        assert os.path.isfile(split_fn)
+        # split_fn = os.path.join(self.root, self.split + ".txt")
+        # assert os.path.isfile(split_fn)
 
         self.images = []
         self.masks = []
+        # print(split_fn)
+        self.images.append('input/test_input.png')
+        self.masks.append(None)
+        return
+        exit(0)
         with open(split_fn, "r") as lines:
             for line in lines:
                 _image = line.strip("\n").split(' ')

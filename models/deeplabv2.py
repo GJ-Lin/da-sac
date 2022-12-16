@@ -12,7 +12,9 @@ affine_par = True
 
 __all__ = ['Res_Deeplab']
 
-BatchNorm = nn.SyncBatchNorm
+# change syncBN 12/15 lgj
+# BatchNorm = nn.SyncBatchNorm
+BatchNorm = nn.BatchNorm2d
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -179,8 +181,9 @@ class DeepLabV2_ResNet101(BaseNet):
 
         self.model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes)
 
+        # change syncBN 12/15 lgj
         # converting to SyncBatchNorm
-        self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
+        # self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
 
         if not pretrained is None:
             self._init_weights(pretrained)
@@ -244,7 +247,8 @@ class DeepLabV2_VGG16(BaseNet):
             add_dilation = (24, 26, 28)
             remove_pool = (23, 30)
 
-        vgg = torch.nn.SyncBatchNorm.convert_sync_batchnorm(vgg)
+        # change syncBN 12/15 lgj
+        # vgg = torch.nn.SyncBatchNorm.convert_sync_batchnorm(vgg)
 
         if not pretrained is None:
             print("VGG16: Loading snapshot: ", pretrained)

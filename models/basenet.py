@@ -11,9 +11,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class BaseNet(nn.Module):
-
-    _trainable = (nn.Linear, nn.Conv2d, nn.ConvTranspose2d, nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d, nn.SyncBatchNorm)
-    _batchnorm = (nn.BatchNorm2d, nn.SyncBatchNorm, nn.GroupNorm)
+    # change syncBN 12/15 lgj
+    # _trainable = (nn.Linear, nn.Conv2d, nn.ConvTranspose2d, nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d, nn.SyncBatchNorm)
+    # _batchnorm = (nn.BatchNorm2d, nn.SyncBatchNorm, nn.GroupNorm)
+    _trainable = (nn.Linear, nn.Conv2d, nn.ConvTranspose2d, nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d, nn.BatchNorm2d)
+    _batchnorm = (nn.BatchNorm2d, nn.BatchNorm2d, nn.GroupNorm)
 
     def __init__(self):
         super().__init__()

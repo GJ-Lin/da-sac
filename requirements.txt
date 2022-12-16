@@ -5,7 +5,7 @@ numpy
 pillow
 imageio
 tensorboard
-sklearn
+scikit-learn
 matplotlib
 future
 pyyaml

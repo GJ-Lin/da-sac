@@ -43,7 +43,7 @@ NUM_THREADS=12
 set OMP_NUM_THREADS=$NUM_THREADS
 export OMP_NUM_THREADS=$NUM_THREADS
 
-CMD="python infer_val.py  --dataloader $DATALOADER \
+CMD="python infer_camera.py  --dataloader $DATALOADER \
                           --cfg $CONFIG \
                           --exp $EXP \
                           --run $RUN_ID \

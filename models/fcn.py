@@ -5,7 +5,9 @@ import torch.nn.functional as F
 from torchvision import models
 from models.basenet import BaseNet
 
-BatchNorm = nn.SyncBatchNorm
+# change syncBN 12/15 lgj
+# BatchNorm = nn.SyncBatchNorm
+BatchNorm = nn.BatchNorm2d
 
 class VGG16_FCN8s(BaseNet):
 
@@ -21,7 +23,8 @@ class VGG16_FCN8s(BaseNet):
         if use_bn:
             # VGG-16 w/ BN
             vgg = models.vgg16_bn()
-            vgg = torch.nn.SyncBatchNorm.convert_sync_batchnorm(vgg)
+            # change syncBN 12/15 lgj
+            # vgg = torch.nn.SyncBatchNorm.convert_sync_batchnorm(vgg)
 
             # {23: 'pool3', 33: 'pool4'}
             self.block1 = vgg.features[:24]

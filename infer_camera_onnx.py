@@ -1,0 +1,211 @@
+import os
+import sys
+import numpy as np
+import imageio
+import threading
+from PIL import Image
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+import torchvision.transforms as transform
+import torchvision.transforms.functional as tf
+
+from opts import get_arguments
+from core.config import cfg, cfg_from_file, cfg_from_list
+from models import get_model
+from datasets import get_num_classes
+from datasets.dataloader_infer import get_dataloader 
+from utils.sys_tools import check_dir
+
+from infer_val import convert_dict, mask_overlay
+from infer_val import ResultWriter
+
+# save logits
+D_SAVE_RAW = False 
+# save CS labels
+D_SAVE_CS = False
+D_VIS = True
+# test mode: no ground truth
+D_NOGT = True
+
+MEAN = [0.485, 0.456, 0.406]
+STD = [0.229, 0.224, 0.225]
+
+class CamCap:
+    def __init__(self, id):
+        self.Frame = []
+        self.status = False
+        self.isstop = False
+        # 摄影机连接。
+        self.cap = cv2.VideoCapture(id)
+
+    def start(self):
+        # 把程序放进子线程，daemon=True 表示该线程会随着主线程关闭而关闭。
+        print('cam started!')
+        threading.Thread(target=self.queryframe, daemon=True, args=()).start()
+
+    def stop(self):
+        # 记得要设计停止无限循环的开关。
+        self.isstop = True
+        print('cam stopped!')
+
+    def getFrame(self):
+        # 当有需要影像时，再回传最新的影像。
+        return self.Frame
+    
+    def getStatus(self):
+        return self.status
+
+    def queryframe(self):
+        while (not self.isstop):
+            self.status, self.Frame = self.cap.read()
+            # print(self.status)
+
+if __name__ == '__main__':
+    # loading the model
+    args = get_arguments(sys.argv[1:])
+
+    # reading the config
+    cfg_from_file(args.cfg_file)
+    if args.set_cfgs is not None:
+        cfg_from_list(args.set_cfgs)
+
+    # initialising the dirs
+    check_dir(args.mask_output_dir, "vis")
+    check_dir(args.mask_output_dir, "cs")
+    if D_SAVE_RAW:
+        check_dir(args.mask_output_dir, "raw")
+
+    #check_dir(args.mask_output_dir, "crf")
+
+    num_classes = get_num_classes(args)
+
+    # Loading the model
+    model = get_model(cfg.MODEL, 0, num_classes=num_classes)
+    assert os.path.isfile(args.resume), "Snapshot not found: {}".format(args.resume)
+    state_dict = convert_dict(torch.load(args.resume)["model"])
+    print(model)
+    model.load_state_dict(state_dict, strict=False)
+
+    for p in model.parameters():
+        p.requires_grad = False
+
+    # setting the evaluation mode
+    model.eval()
+    # model = nn.DataParallel(model).cuda()
+    model = nn.DataParallel(model).cpu()
+    # import onnx
+    # model = onnx.load("final_e136.onnx")
+
+    infer_dataset = get_dataloader(args.dataloader, cfg, args.infer_list)
+    palette = infer_dataset.get_palette()
+
+    writer = ResultWriter(palette, args.mask_output_dir, verbose=D_VIS, raw=D_SAVE_RAW, save_cs=D_SAVE_CS)
+
+    import cv2
+    import time
+    # cap = CamCap(0)
+    # cap.start()
+    # time.sleep(1)
+    while(True):
+
+        # frame = cap.getFrame()
+        # if not cap.getStatus():
+        #     print("Failed to read the image.")
+        #     break
+        
+        # image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+        image = Image.open('input/test_input.png').convert('RGB')
+        image = image.resize((640, 480))
+        print(image.size)
+        # exit(0)
+        # image = Image.open('input/test_input2.jpeg').convert('RGB')
+        image = tf.to_tensor(image)
+
+        imnorm = transform.Normalize(MEAN, STD)
+        image = imnorm(image)
+        # exit(0)
+        # 原来经过 DataLoader 时升高了一个维度，加一个 batch_size
+        image = image.view(1,*image.size())
+        # print(type(image))
+        # print(image.size())
+        # print(image)
+
+        # exit(0)
+        import onnxruntime
+
+        ort_session = onnxruntime.InferenceSession("final_e136.onnx")
+
+        def to_numpy(tensor):
+            return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
+
+        # compute ONNX Runtime output prediction
+        # print(image.size())
+        ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(image)}
+        ort_outs = ort_session.run(None, ort_inputs)
+        # print(ort_outs)
+        # cv2.imwrite('onnx_test.jpg', ort_outs[0][0][0])
+        # exit(0)
+        # print(ort_outs[0].shape)
+        # masks_pred = [ort_outs[0].resize((1, 19, 480, 640))]
+        # exit(0)
+        # # compare ONNX Runtime and PyTorch results
+        # np.testing.assert_allclose(to_numpy(torch_out), ort_outs[0], rtol=1e-03, atol=1e-05)
+
+        print("Exported model has been tested with ONNXRuntime, and the result looks good!")
+        with torch.no_grad():
+            _, logits = model(image, teacher=False)
+            # print(logits)
+            # print(logits.size())
+            # exit(0)
+            masks_pred = F.softmax(logits, 1)
+            # print(masks_pred)
+            # print(masks_pred.size())
+            exit(0)
+            # masks_pred = F.softmax(torch.Tensor(ort_outs[0]), 1)
+
+        image = infer_dataset.denorm(image)
+        print(image.size())
+        # exit(0)
+        image = image[0]
+        masks = masks_pred[0].cpu()
+        masks_raw = masks.numpy()
+        # print(masks_raw.shape)
+        # print(ort_outs[0].shape)
+        # print(ort_outs[0].resize((19, 480, 640)).shape)
+        # exit(0)
+        # masks_raw = ort_outs[0][0].resize((19, 480, 640))
+        # print(masks_raw.shape)
+        # exit(0)
+        pred = np.argmax(masks_raw, 0).astype(np.uint8)
+        print(pred.shape)
+        print(pred)
+        exit(0)
+
+        masks = pred
+        # print(masks.shape)
+        # masks.resize((480, 640), refcheck=False)
+        # exit(0)
+        images = image.numpy()
+
+        images = np.transpose(images, [1,2,0])
+        
+        overlay = mask_overlay(masks, images, palette)
+        # filepath = os.path.join(self.out_path, "vis", im_name + '.png')
+        filepath = 'test_img.png'
+        imageio.imwrite(filepath, (overlay * 255.).astype(np.uint8))
+        exit(0)
+        img = cv2.cvtColor(np.asarray((overlay * 255.).astype(np.uint8)), cv2.COLOR_RGB2BGR)
+        cv2.imshow('Video', img)
+        key = cv2.waitKey(1)
+        if key == 27:
+            break
+        # break
+    
+    # cap.release()
+    cap.stop()
+    cv2.destroyAllWindows()
+    exit(0)
