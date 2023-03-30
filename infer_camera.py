@@ -79,7 +79,7 @@ class Dasac(object):
         self.infer_dataset = get_dataloader(args['dataloader'], cfg, args['infer_list'])
         self.palette = self.infer_dataset.get_palette()
     
-    def infer(self, image):
+    def infer(self, image, ret_pred=False):
         image = tf.to_tensor(image)
 
         imnorm = transform.Normalize(MEAN, STD)
@@ -105,7 +105,11 @@ class Dasac(object):
 
         overlay = mask_overlay(masks, images, self.palette)
         img = cv2.cvtColor(np.asarray((overlay * 255.).astype(np.uint8)), cv2.COLOR_RGB2BGR)
-        return img
+
+        if ret_pred:
+            return img, pred
+        else:
+            return img
 
 if __name__ == '__main__':
     # loading the model
