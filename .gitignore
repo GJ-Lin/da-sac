@@ -33,6 +33,5 @@ infer_camera.py
 input_multi/
 output_multi/
 .gitignore
-demo_multi.py
 input_dataset/
 test_cvrt_onnx.py
